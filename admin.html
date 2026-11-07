@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maska Agencies — Secure Admin Portal</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    @keyframes zoomIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-zoom-in {
+      animation: zoomIn 0.2s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+
+  <div id="login-box" class="hidden min-h-screen flex items-center justify-center p-4 sm:p-6">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-100 max-w-md w-full">
+      <div class="text-center mb-8">
+        <div class="mx-auto bg-blue-600 w-12 h-12 rounded-xl flex items-center justify-center font-black text-white text-2xl mb-4">M</div>
+        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Admin Gateway</h2>
+        <p class="text-xs text-slate-400 font-medium mt-1">Sign in to manage Maska inventory.</p>
+      </div>
+
+      <form id="login-form" autocomplete="off" class="space-y-5">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Email Address</label>
+          <input type="email" id="login-email" autocomplete="off" required class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-base md:text-sm transition outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Password</label>
+          <input type="password" id="login-password" autocomplete="new-password" required class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-base md:text-sm transition outline-none">
+        </div>
+        
+        <p id="login-error" class="text-xs text-rose-600 font-bold hidden text-center"></p>
+        
+        <button type="submit" id="login-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition duration-200 text-xs uppercase tracking-wider cursor-pointer">
+          <i class="fa-solid fa-lock mr-1"></i> Sign In to Dashboard
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="dashboard-box" class="hidden pb-24"> 
+    <header class="bg-slate-900 text-white shadow-md">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 md:py-0 md:h-20 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
+        <div class="flex items-center gap-3">
+          <span class="text-xl bg-blue-600 w-10 h-10 rounded-xl flex items-center justify-center font-black shrink-0">M</span>
+          <div class="text-center md:text-left">
+            <h1 class="font-black text-lg tracking-tight">Maska Dashboard</h1>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Internal Property Management</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+          <a href="index.html" target="_blank" class="text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 sm:px-4 py-2 rounded-xl font-bold transition text-center">
+            View Live Website <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[10px]"></i>
+          </a>
+          <button id="logout-btn" class="text-[11px] sm:text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 sm:px-4 py-2 rounded-xl font-bold transition cursor-pointer">
+            <i class="fa-solid fa-right-from-bracket mr-1"></i> Log Out
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-6 md:py-10">
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8 animate-zoom-in">
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shrink-0">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Views This Month</p>
+            <h3 id="stat-visitors" class="text-3xl font-black text-slate-900 leading-none mt-1">--</h3>
+          </div>
+        </div>
+        <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center gap-5">
+          <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl shrink-0">
+            <i class="fa-solid fa-building"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Live Properties</p>
+            <h3 id="stat-properties" class="text-3xl font-black text-slate-900 leading-none mt-1">--</h3>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm border border-slate-100">
+        <div class="mb-6">
+          <h2 class="text-xl font-black text-slate-900 tracking-tight">Broadcast New Listing</h2>
+          <p class="text-xs text-slate-400 font-medium mt-0.5">Fill out the fields to push a verified property to the live catalog.</p>
+        </div>
+
+        <form id="upload-form" class="space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Property Title</label>
+              <input type="text" id="title" required placeholder="e.g., Executive Modern Bedsitter" class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-base md:text-sm transition outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Location & GPS</label>
+              <div class="flex gap-2">
+                <input type="text" id="location" required placeholder="e.g., Embu, Near Town Center" class="flex-1 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-base md:text-sm transition outline-none">
+                <button type="button" onclick="captureCoordinatesForUpload(this)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer shrink-0" title="Capture GPS Coordinates">
+                  <i class="fa-solid fa-location-crosshairs mr-1"></i> Pin
+                </button>
+              </div>
+              <p id="coord-display" class="text-[10px] text-emerald-600 font-bold mt-1.5 hidden"></p>
+              <input type="hidden" id="latitude">
+              <input type="hidden" id="longitude">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Price Display</label>
+              <input type="text" id="price" required placeholder="e.g., Ksh 9,500/mo" class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-base md:text-sm transition outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Listing Type</label>
+              <select id="type" class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-base md:text-sm transition outline-none font-medium appearance-none">
+                <option value="rent">For Rent</option>
+                <option value="sale">For Sale</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Number of Vacant Units</label>
+              <input type="text" id="tag" placeholder="e.g., 3" class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-base md:text-sm transition outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Key Amenities (Comma Separated)</label>
+            <input type="text" id="features" placeholder="e.g., Borehole Water, Free WiFi, Ample Parking" class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-base md:text-sm transition outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">360° Virtual Tour Link (Optional)</label>
+            <input type="url" id="embed_360" placeholder="e.g., https://my.matterport.com/show/?m=your_id" class="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-3 text-base md:text-sm transition outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Property Images (Select 5 to 8 photos)</label>
+            <input type="file" id="image-files" required accept="image/png, image/jpeg, image/webp" multiple class="w-full text-base md:text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+          </div>
+
+          <button type="submit" id="submit-btn" class="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition duration-200 text-xs uppercase tracking-wider cursor-pointer">
+            <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Upload and Publish Listing
+          </button>
+        </form>
+      </div>
+
+      <div class="bg-white rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm border border-slate-100 mt-8 md:mt-10">
+        <div class="mb-6">
+          <h2 class="text-xl font-black text-slate-900 tracking-tight">Active Cloud Inventory</h2>
+          <p class="text-xs font-medium text-slate-400 mt-0.5">Live view of listings currently showing on the user interface page.</p>
+        </div>
+
+        <div id="admin-inventory-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 md:gap-6">
+          <p class="text-sm font-medium text-slate-400 col-span-full text-center py-4">Syncing local data tables...</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <button id="audit-log-trigger-btn" onclick="toggleAuditLogModal(true)" class="hidden fixed bottom-6 right-6 z-40 bg-slate-900 hover:bg-blue-600 text-white font-bold p-4 rounded-full shadow-2xl transition duration-200 items-center justify-center gap-2 cursor-pointer group">
+    <i class="fa-solid fa-clipboard-list text-lg"></i>
+    <span class="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out text-xs uppercase tracking-wider font-bold whitespace-nowrap">System Logs</span>
+  </button>
+
+  <div id="audit-log-modal" class="hidden fixed inset-0 bg-white z-50 flex items-center justify-center p-0 ">
+    <div class="bg-white w-full h-full flex flex-col overflow-hidden animate-zoom-in">
+      <div class="bg-slate-900 text-white px-6 py-5 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="bg-blue-600 w-10 h-10 rounded-xl flex items-center justify-center font-black text-white"><i class="fa-solid fa-shield-halved"></i></div>
+          <div>
+            <h2 class="text-lg font-black tracking-tight">System Logs</h2>
+            <p class="text-xs text-slate-400 font-medium mt-0.5">Automated activity record for uploads, edits, and deletions</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="fetchAuditLogs()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-rotate"></i> Refresh
+          </button>
+          <button onclick="toggleAuditLogModal(false)" class="bg-rose-600 hover:bg-rose-700 text-white w-9 h-9 rounded-xl font-bold transition flex items-center justify-center cursor-pointer text-sm">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50">
+        <div class="max-w-7xl mx-auto overflow-x-auto border border-slate-200 rounded-2xl bg-white shadow-xs">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-100 text-slate-500 font-bold border-b border-slate-200">
+                <th class="p-4 uppercase tracking-wider text-[10px]">Action Type</th>
+                <th class="p-4 uppercase tracking-wider text-[10px]">Admin User</th>
+                <th class="p-4 uppercase tracking-wider text-[10px]">Property Title</th>
+                <th class="p-4 uppercase tracking-wider text-[10px]">Price Display</th>
+                <th class="p-4 uppercase tracking-wider text-[10px]">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="audit-log-table-body">
+              <tr>
+                <td colSpan="5" class="p-8 text-center text-slate-400 font-medium">Syncing system activity streams...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://yfagudpbodqqvgdvtzdu.supabase.co"; 
+    const SUPABASE_ANON_KEY = "sb_publishable_1M2Sj1y7ujLu-nlvZ-bwsg_hZrvXrkJ";
+    
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    let currentAdminEmail = ""; 
+    let currentUserId = ""; 
+
+    let inactivityTimer;
+    let heartbeatInterval; 
+    let isPendingOfflineLogout = false; 
+    
+    const INACTIVITY_LIMIT = 15 * 60 * 1000; 
+    const HEARTBEAT_INTERVAL = 30 * 1000; 
+
+    function sanitizeText(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\//g, '&#x2F;');
+    }
+
+    // --- GEO LOCATION CAPTURE ---
+    function captureCoordinatesForUpload(btn) {
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+      }
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>';
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          document.getElementById('latitude').value = position.coords.latitude;
+          document.getElementById('longitude').value = position.coords.longitude;
+          document.getElementById('coord-display').classList.remove('hidden');
+          document.getElementById('coord-display').innerText = `📍 Captured: ${position.coords.latitude.toFixed(5)}, ${position.coords.longitude.toFixed(5)}`;
+          btn.innerHTML = originalText;
+        },
+        (error) => {
+          alert("Could not get location: " + error.message);
+          btn.innerHTML = originalText;
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    async function executeSecureLogout(message) {
+      document.getElementById('dashboard-box').classList.add('hidden');
+      document.getElementById('login-box').classList.remove('hidden');
+      document.getElementById('audit-log-trigger-btn').classList.add('hidden');
+      document.getElementById('audit-log-trigger-btn').classList.remove('flex');
+      
+      document.getElementById('login-email').value = '';
+      document.getElementById('login-password').value = '';
+      
+      clearTimeout(inactivityTimer);
+      clearInterval(heartbeatInterval);
+      currentAdminEmail = "";
+      currentUserId = "";
+
+      if (!navigator.onLine) {
+        isPendingOfflineLogout = true;
+        alert(message + "\n\n(Network disconnected. You are securely locked out locally, and final cloud logout will process when connection returns).");
+        return;
+      }
+
+      alert(message);
+      try {
+        await supabaseClient.auth.signOut({ scope: 'local' });
+      } catch (err) {
+        console.warn("Sign out network error:", err);
+      } finally {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.reload(); 
+      }
+    }
+
+    window.addEventListener('online', async () => {
+      if (isPendingOfflineLogout) {
+        isPendingOfflineLogout = false;
+        try {
+          await supabaseClient.auth.signOut();
+        } catch (e) {}
+        window.location.reload(); 
+      }
+    });
+
+    async function updateSessionHeartbeat() {
+      if (!currentUserId) return;
+      try {
+        await supabaseClient
+          .from('admin_sessions')
+          .upsert({
+            user_id: currentUserId,
+            email: currentAdminEmail,
+            last_active: new Date().toISOString()
+          }, { onConflict: 'user_id' }); 
+      } catch (error) {
+        console.error("Heartbeat sync failed:", error);
+      }
+    }
+
+    async function validateDatabaseSession() {
+      if (!currentUserId) return false;
+      try {
+        const { data, error } = await supabaseClient
+          .from('admin_sessions')
+          .select('last_active')
+          .eq('user_id', currentUserId)
+          .single();
+
+        if (error || !data) throw new Error("No active database session found.");
+
+        const lastActiveTime = new Date(data.last_active).getTime();
+        const currentTime = new Date().getTime();
+        
+        if ((currentTime - lastActiveTime) > INACTIVITY_LIMIT) {
+          executeSecureLogout("Your secure session has expired on the server. Please log in again.");
+          return false;
+        }
+        return true;
+      } catch (err) {
+        console.warn("Session validation failed:", err);
+        if (!navigator.onLine) return true; 
+        executeSecureLogout("Session validation failed securely. Please log in again.");
+        return false;
+      }
+    }
+
+    function resetInactivityTimer() {
+      if (currentAdminEmail) {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(() => {
+          executeSecureLogout("Session expired due to 15 minutes of inactivity. For your security, please log in again.");
+        }, INACTIVITY_LIMIT);
+      }
+    }
+
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(event => {
+      window.addEventListener(event, resetInactivityTimer);
+    });
+
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      const loginBox = document.getElementById('login-box');
+      const dashboardBox = document.getElementById('dashboard-box');
+      const triggerBtn = document.getElementById('audit-log-trigger-btn');
+
+      if (session) {
+        currentAdminEmail = session.user.email; 
+        currentUserId = session.user.id; 
+
+        loginBox.classList.add('hidden');
+        dashboardBox.classList.remove('hidden');
+        triggerBtn.classList.remove('hidden');
+        triggerBtn.classList.add('flex');
+        
+        fetchAdminInventory(); 
+        fetchAnalytics(); 
+        
+        await updateSessionHeartbeat(); 
+        heartbeatInterval = setInterval(updateSessionHeartbeat, HEARTBEAT_INTERVAL); 
+        resetInactivityTimer(); 
+      } else {
+        currentAdminEmail = ""; 
+        currentUserId = ""; 
+        
+        clearTimeout(inactivityTimer); 
+        clearInterval(heartbeatInterval); 
+
+        document.getElementById('login-email').value = '';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-error').classList.add('hidden');
+
+        dashboardBox.classList.add('hidden');
+        loginBox.classList.remove('hidden');
+        triggerBtn.classList.add('hidden');
+        triggerBtn.classList.remove('flex');
+        document.getElementById('admin-inventory-grid').innerHTML = '';
+        document.getElementById('audit-log-table-body').innerHTML = '';
+        toggleAuditLogModal(false);
+      }
+    });
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const btn = document.getElementById('login-submit-btn');
+      const errorMsg = document.getElementById('login-error');
+
+      btn.disabled = true;
+      btn.innerText = "Authenticating...";
+      errorMsg.classList.add('hidden');
+
+      const { error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (error) {
+        errorMsg.innerText = error.message;
+        errorMsg.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerText = "Sign In to Dashboard";
+      }
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', async function() {
+      executeSecureLogout("You have successfully logged out.");
+    });
+
+    async function writeAuditLog(actionType, title, price) {
+      try {
+        await supabaseClient.from('audit_logs').insert([{
+          action_type: actionType,
+          user_email: currentAdminEmail, 
+          property_title: title,
+          price_display: price
+        }]);
+        fetchAuditLogs();
+      } catch (err) {
+        console.error("Failed to post system audit trace log entry:", err);
+      }
+    }
+
+    function toggleAuditLogModal(show) {
+      const modal = document.getElementById('audit-log-modal');
+      if (show) {
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        fetchAuditLogs();
+      } else {
+        modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+      }
+    }
+
+    async function fetchAuditLogs() {
+      const tbody = document.getElementById('audit-log-table-body');
+      if (!tbody) return;
+
+      const { data: logs, error } = await supabaseClient
+        .from('audit_logs')
+        .select('*')
+        .order('id', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        tbody.innerHTML = `<tr><td colSpan="5" class="p-4 text-rose-500 text-center font-bold">Log sync error: ${sanitizeText(error.message)}</td></tr>`;
+        return;
+      }
+      if (!logs || logs.length === 0) {
+        tbody.innerHTML = `<tr><td colSpan="5" class="p-6 text-center text-slate-400 font-medium">No system activity tracking records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = logs.map(log => {
+        let badgeStyle = "bg-emerald-100 text-emerald-800";
+        if (log.action_type === 'Edit' || log.action_type === 'Map Pin') badgeStyle = "bg-blue-100 text-blue-800";
+        if (log.action_type === 'Delete') badgeStyle = "bg-rose-100 text-rose-800";
+
+        const formattedTime = new Date(log.created_at).toLocaleString();
+
+        return `
+          <tr class="border-b border-slate-100 hover:bg-slate-50 text-slate-700 font-medium">
+            <td class="p-4 font-bold"><span class="px-2.5 py-1 rounded-md text-[10px] uppercase tracking-wider ${badgeStyle}">${sanitizeText(log.action_type)}</span></td>
+            <td class="p-4 font-medium text-slate-500 text-xs">${sanitizeText(log.user_email || 'Unknown')}</td>
+            <td class="p-4 font-bold text-slate-900 max-w-[220px] truncate">${sanitizeText(log.property_title)}</td>
+            <td class="p-4 text-slate-600 font-extrabold">${sanitizeText(log.price_display)}</td>
+            <td class="p-4 text-slate-400 text-xs">${formattedTime}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('upload-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      if (!(await validateDatabaseSession())) return;
+      
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+
+      const title = document.getElementById('title').value;
+      const location = document.getElementById('location').value;
+      const price = document.getElementById('price').value;
+      const type = document.getElementById('type').value;
+      const tag = document.getElementById('tag').value;
+      
+      const latVal = document.getElementById('latitude').value;
+      const lngVal = document.getElementById('longitude').value;
+      
+      const featuresInput = document.getElementById('features').value;
+      const featuresArray = featuresInput ? featuresInput.split(',').map(item => item.trim()).filter(item => item !== "") : [];
+
+      const embed360 = document.getElementById('embed_360').value.trim();
+
+      const imageFiles = document.getElementById('image-files').files;
+      let uploadedImageUrls = [];
+
+      try {
+        if (imageFiles.length < 5) {
+          throw new Error("Please select at least 5 images to show a complete property gallery.");
+        }
+        if (imageFiles.length > 8) {
+          throw new Error("Maximum limit exceeded. You can only select up to 8 images.");
+        }
+
+        submitBtn.innerText = `Uploading Assets (0/${imageFiles.length})...`;
+
+        for (let i = 0; i < imageFiles.length; i++) {
+          submitBtn.innerText = `Uploading Assets (${i + 1}/${imageFiles.length})...`;
+          
+          const file = imageFiles[i];
+          const fileExtension = file.name.split('.').pop();
+          const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExtension}`;
+
+          const { data: uploadData, error: uploadError } = await supabaseClient.storage
+            .from('property-images')
+            .upload(uniqueFileName, file);
+
+          if (uploadError) throw new Error(`Image ${i + 1} Rejected: ` + uploadError.message);
+
+          const { data: publicUrlData } = supabaseClient.storage
+            .from('property-images')
+            .getPublicUrl(uniqueFileName);
+            
+          uploadedImageUrls.push(publicUrlData.publicUrl);
+        }
+
+        submitBtn.innerText = "Publishing Listing...";
+
+        const { error: dbError } = await supabaseClient
+          .from('properties')
+          .insert([{
+            title: title,
+            location: location,
+            price: price,
+            type: type,
+            tag: tag || null,
+            features: featuresArray,
+            images: uploadedImageUrls,
+            latitude: latVal ? parseFloat(latVal) : null,
+            longitude: lngVal ? parseFloat(lngVal) : null,
+            embed_360: embed360 || null
+          }]);
+
+        if (dbError) throw dbError;
+
+        await writeAuditLog('Publish', title, price);
+
+        alert(`Upload Complete! Successfully pushed listing with ${uploadedImageUrls.length} verified photos.`);
+        document.getElementById('upload-form').reset();
+        document.getElementById('latitude').value = '';
+        document.getElementById('longitude').value = '';
+        document.getElementById('coord-display').classList.add('hidden');
+        document.getElementById('coord-display').innerText = '';
+        
+        fetchAdminInventory();
+        fetchAnalytics(); 
+
+      } catch (err) {
+        alert("Operation Aborted: " + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i> Upload and Publish Listing';
+      }
+    });
+
+    async function fetchAdminInventory() {
+      const container = document.getElementById('admin-inventory-grid');
+      
+      const { data: properties, error } = await supabaseClient
+        .from('properties')
+        .select('*')
+        .order('id', { ascending: false });
+
+      if (error) {
+        container.innerHTML = `<p class="text-sm text-red-500 col-span-full">Error sync: ${sanitizeText(error.message)}</p>`;
+        return;
+      }
+
+      if (!properties || properties.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-6">
+            <p class="text-sm font-bold text-slate-400">🏡 No active live properties inside the database right now.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = properties.map(item => {
+        const fallbackImg = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80";
+        
+        let displayImg = fallbackImg;
+        if (item.images && item.images.length > 0) {
+          displayImg = item.images[0];
+        } else if (item.image) {
+          displayImg = item.image;
+        }
+
+        const photoCount = item.images ? item.images.length : (item.image ? 1 : 0);
+        
+        const featuresText = item.features ? (Array.isArray(item.features) ? item.features.join(', ') : item.features) : '';
+        const tagText = item.tag || '';
+
+        return `
+          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col justify-between shadow-xs relative">
+            <span class="absolute top-6 right-6 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] px-2 py-1 rounded-md font-bold">
+              <i class="fa-solid fa-images mr-1"></i> ${photoCount} Photos
+            </span>
+            <div>
+              <img src="${encodeURI(displayImg)}" class="w-full h-32 object-cover rounded-xl mb-3">
+              <h4 class="font-bold text-slate-900 text-sm truncate" id="inv-title-${item.id}">${sanitizeText(item.title)}</h4>
+              <p class="text-xs text-slate-400 font-bold mt-0.5">${sanitizeText(item.location)}</p>
+              
+              <div class="space-y-2 border-t border-slate-200/60 pt-3 mt-2">
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Price Display</label>
+                  <input type="text" id="edit-price-${item.id}" value="${sanitizeText(item.price)}" class="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs font-extrabold text-blue-600 transition outline-none mt-0.5">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Vacant Units</label>
+                  <input type="text" id="edit-tag-${item.id}" value="${sanitizeText(tagText)}" placeholder="e.g., 3" class="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 transition outline-none mt-0.5">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Key Amenities</label>
+                  <input type="text" id="edit-features-${item.id}" value="${sanitizeText(featuresText)}" placeholder="None" class="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 transition outline-none mt-0.5">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">360° Embed Link</label>
+                  <input type="text" id="edit-embed-${item.id}" value="${sanitizeText(item.embed_360 || '')}" placeholder="Optional URL" class="w-full bg-white border border-slate-200 focus:border-blue-500 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 transition outline-none mt-0.5">
+                </div>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-2 mt-4">
+              <button onclick="updateListing(${item.id}, this)" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold py-2 px-1 rounded-xl transition flex items-center justify-center gap-1 cursor-pointer">
+                <i class="fa-solid fa-floppy-disk"></i> Save
+              </button>
+              <button onclick="updateMapPin(${item.id}, this)" class="bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white text-[11px] font-bold py-2 px-1 rounded-xl transition flex items-center justify-center gap-1 cursor-pointer" title="Update to Current Location">
+                <i class="fa-solid fa-location-crosshairs"></i> Pin
+              </button>
+              <button onclick="deleteListing(${item.id})" class="bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white text-[11px] font-bold py-2 px-1 rounded-xl transition flex items-center justify-center gap-1 cursor-pointer">
+                <i class="fa-solid fa-trash-can"></i> Delete
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function updateListing(id, btnElement) {
+      if (!(await validateDatabaseSession())) return;
+
+      const price = document.getElementById(`edit-price-${id}`).value;
+      const tag = document.getElementById(`edit-tag-${id}`).value;
+      const featuresInput = document.getElementById(`edit-features-${id}`).value;
+      const embed360 = document.getElementById(`edit-embed-${id}`).value.trim();
+      const title = document.getElementById(`inv-title-${id}`).innerText;
+      
+      const featuresArray = featuresInput ? featuresInput.split(',').map(item => item.trim()).filter(item => item !== "") : [];
+
+      const originalBtnHtml = btnElement.innerHTML;
+      btnElement.disabled = true;
+      btnElement.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>';
+
+      const { error } = await supabaseClient
+        .from('properties')
+        .update({
+          price: price,
+          tag: tag || null,
+          features: featuresArray,
+          embed_360: embed360 || null
+        })
+        .eq('id', id);
+
+      if (error) {
+        alert("Update Failed: " + error.message);
+        btnElement.disabled = false;
+        btnElement.innerHTML = originalBtnHtml;
+        return;
+      }
+
+      await writeAuditLog('Edit', title, price);
+
+      alert("Listing updated successfully!");
+      fetchAdminInventory();
+    }
+
+    // --- GEO LOCATION UPDATE PIN ---
+    async function updateMapPin(id, btnElement) {
+      if (!(await validateDatabaseSession())) return;
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your device.");
+        return;
+      }
+      if (!confirm("Are you physically at the property right now? This will permanently set the map coordinates for this listing to your exact current location.")) return;
+
+      const originalBtnHtml = btnElement.innerHTML;
+      btnElement.disabled = true;
+      btnElement.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>';
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { error } = await supabaseClient
+              .from('properties')
+              .update({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              })
+              .eq('id', id);
+
+            if (error) throw error;
+            
+            const title = document.getElementById(`inv-title-${id}`).innerText;
+            await writeAuditLog('Map Pin', title, `Lat: ${position.coords.latitude.toFixed(3)}`);
+            alert("Map pin successfully linked to your current location!");
+          } catch (err) {
+            alert("Failed to update pin: " + err.message);
+          } finally {
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalBtnHtml;
+          }
+        },
+        (error) => {
+          alert("Could not get location. Ensure GPS is enabled: " + error.message);
+          btnElement.disabled = false;
+          btnElement.innerHTML = originalBtnHtml;
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    async function deleteListing(id) {
+      if (!confirm("Are you sure you want to permanently remove this listing and its images from the cloud?")) return;
+
+      if (!(await validateDatabaseSession())) return;
+
+      const title = document.getElementById(`inv-title-${id}`).innerText;
+      const price = document.getElementById(`edit-price-${id}`).value;
+
+      try {
+        const { data: listingData, error: fetchError } = await supabaseClient
+          .from('properties')
+          .select('images')
+          .eq('id', id)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        if (listingData && listingData.images && listingData.images.length > 0) {
+          const fileNamesToDelete = listingData.images.map(url => {
+            const parts = url.split('/');
+            return parts[parts.length - 1]; 
+          });
+
+          const { error: storageError } = await supabaseClient.storage
+            .from('property-images')
+            .remove(fileNamesToDelete);
+
+          if (storageError) {
+            console.warn("Images could not be deleted from storage:", storageError.message);
+          }
+        }
+
+        const { error: dbError } = await supabaseClient
+          .from('properties')
+          .delete()
+          .eq('id', id);
+
+        if (dbError) throw dbError;
+
+        await writeAuditLog('Delete', title, price);
+        alert("Listing and all associated images successfully removed!");
+        fetchAdminInventory();
+        fetchAnalytics(); 
+
+      } catch (err) {
+        alert("Deletion Blocked: " + err.message);
+      }
+    }
+
+    async function fetchAnalytics() {
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      const { count: visitorCount, error: visitorError } = await supabaseClient
+        .from('page_visits')
+        .select('*', { count: 'exact', head: true })
+        .gte('visited_at', firstDayOfMonth);
+      
+      if (!visitorError && visitorCount !== null) {
+        document.getElementById('stat-visitors').innerText = visitorCount.toLocaleString();
+      }
+
+      const { count: propertyCount, error: propError } = await supabaseClient
+        .from('properties')
+        .select('*', { count: 'exact', head: true });
+        
+      if (!propError && propertyCount !== null) {
+        document.getElementById('stat-properties').innerText = propertyCount.toLocaleString();
+      }
+    }
+
+  </script>
+</body>
+</html>
